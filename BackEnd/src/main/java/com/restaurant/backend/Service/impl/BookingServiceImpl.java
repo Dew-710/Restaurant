@@ -15,12 +15,20 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 @Transactional
 public class BookingServiceImpl implements BookingService {
 
     private final BookingRepository bookingRepository;
     private final RestaurantTableRepository restaurantTableRepository;
+    private final com.restaurant.backend.Service.OrderService orderService;
+
+    public BookingServiceImpl(BookingRepository bookingRepository,
+                              RestaurantTableRepository restaurantTableRepository,
+                              @org.springframework.context.annotation.Lazy com.restaurant.backend.Service.OrderService orderService) {
+        this.bookingRepository = bookingRepository;
+        this.restaurantTableRepository = restaurantTableRepository;
+        this.orderService = orderService;
+    }
 
     @Override
     @Transactional(readOnly = true)
@@ -137,12 +145,18 @@ public class BookingServiceImpl implements BookingService {
     @Override
     public Booking checkInBooking(Long id) {
         Booking booking = findById(id);
-        booking.setStatus("CONFIRMED");
+        booking.setStatus("COMPLETED");
 
         // Khi check-in, bàn chuyển thành OCCUPIED (khách hàng có mặt và có thể gọi món)
         if (booking.getTable() != null) {
-            booking.getTable().setStatus("OCCUPIED");
-            restaurantTableRepository.save(booking.getTable());
+            RestaurantTable table = booking.getTable();
+            table.setStatus("OCCUPIED");
+            restaurantTableRepository.save(table);
+
+            // Tự động tạo đơn hàng ban đầu cho bàn khi khách check-in
+            if (booking.getCustomer() != null) {
+                orderService.getOrCreateActiveOrder(table.getId(), booking.getCustomer().getId());
+            }
         }
 
         return bookingRepository.save(booking);

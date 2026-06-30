@@ -7,6 +7,7 @@ import com.restaurant.backend.Service.OrderService;
 import com.restaurant.backend.Service.QRCodeService;
 import com.restaurant.backend.Service.RestaurantTableService;
 import com.restaurant.backend.websocket.IoTWebSocketHandler;
+import com.restaurant.backend.Config.FrontendConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,7 @@ public class TableServiceImpl implements RestaurantTableService {
     private final QRCodeService qrCodeService;
     private final IoTWebSocketHandler webSocketHandler;
     private final OrderService orderService;
+    private final FrontendConfig frontendConfig;
 
     @Override
     @Transactional(readOnly = true)
@@ -103,10 +105,7 @@ public class TableServiceImpl implements RestaurantTableService {
                 System.out.println("🎯 Auto-sending QR code for table " + table.getTableName() + " (ID: " + id + ")");
 
                 // Tạo URL frontend cho QR code (khách hàng scan để xem menu)
-                String frontendUrl = System.getenv("FRONTEND_URL");
-                if (frontendUrl == null || frontendUrl.isEmpty()) {
-                    frontendUrl = "http://localhost:3000";
-                }
+                String frontendUrl = frontendConfig.getFrontendUrl();
                 String qrUrl = frontendUrl + "/menu/" + table.getQrCode();
 
                 // Tạo hình ảnh QR code

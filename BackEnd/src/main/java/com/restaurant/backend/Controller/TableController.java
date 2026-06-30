@@ -221,4 +221,43 @@ public class TableController {
                 )
         );
     }
+
+    /**
+     * Tạo bàn mới (Admin)
+     */
+    @PostMapping("/create")
+    public ResponseEntity<?> createTable(@RequestBody RestaurantTable table) {
+        RestaurantTable created = tableService.create(table);
+        return ResponseEntity.ok(
+                Map.of(
+                        "message", "Table created successfully",
+                        "table", created
+                )
+        );
+    }
+
+    /**
+     * Cập nhật thông tin bàn (Admin)
+     */
+    @PutMapping("/update/{id}")
+    public ResponseEntity<?> updateTable(@PathVariable Long id, @RequestBody RestaurantTable table) {
+        RestaurantTable updated = tableService.update(id, table);
+        return ResponseEntity.ok(
+                Map.of(
+                        "message", "Table updated successfully",
+                        "table", updated
+                )
+        );
+    }
+
+    /**
+     * Xóa bàn (Admin)
+     */
+    @DeleteMapping("/delete/{id}")
+    public ResponseEntity<?> deleteTable(@PathVariable Long id) {
+        tableService.delete(id);
+        return ResponseEntity.ok(
+                Map.of("message", "Table deleted successfully")
+        );
+    }
 }

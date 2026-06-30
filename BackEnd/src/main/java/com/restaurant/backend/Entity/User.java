@@ -44,7 +44,7 @@ public class User {
     private LocalDateTime updatedAt;
 
     // USER → BOOKING
-    @OneToMany(mappedBy = "customer")
+    @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     private List<Booking> bookings;
 

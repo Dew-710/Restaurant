@@ -29,7 +29,8 @@ import {
   cancelBooking,
   checkInBooking,
   register,
-  checkTableAvailability
+  checkTableAvailability,
+  closeOrder
 } from '@/lib/api';
 import type {
   RestaurantTable,
@@ -265,12 +266,27 @@ function StaffDashboardContent() {
     setPaymentDialogOpen(true);
   };
 
+  const handleCloseAndPayOrder = async (order: Order) => {
+    try {
+      const closedOrderRes = await closeOrder(order.id);
+      toast.success('Chốt hóa đơn thành công!');
+      await loadDashboardData();
+      
+      const closedOrder = closedOrderRes.order;
+      setSelectedOrderForPayment(closedOrder);
+      setPaymentMethod(null);
+      setPaymentDialogOpen(true);
+    } catch (error: any) {
+      toast.error('Chốt hóa đơn thất bại: ' + (error.message || 'Lỗi không xác định'));
+    }
+  };
+
   const handleCashPayment = async () => {
     if (!selectedOrderForPayment) return;
 
     try {
       const apiUrl = getApiBaseUrl();
-      await fetch(`${apiUrl}/api/payments/process`, {
+      await fetch(`${apiUrl}/api/payments/process/${selectedOrderForPayment.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -464,7 +480,7 @@ function StaffDashboardContent() {
                        table.status === 'PENDING_CHECKIN' ? 'Chờ check-in' :
                        table.status === 'MAINTENANCE' ? 'Bảo trì' : table.status}
                     </Badge>
-                    <div className="flex gap-2 mt-3">
+                    <div className="flex gap-2 mt-3 flex-wrap">
                       {table.status === 'AVAILABLE' && (
                         <Button
                           size="sm"
@@ -483,6 +499,15 @@ function StaffDashboardContent() {
                           onClick={() => handleCheckOut(table.id)}
                         >
                           Check-out
+                        </Button>
+                      )}
+                      {table.status === 'CLEANING' && (
+                        <Button
+                          size="sm"
+                          className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                          onClick={() => handleTableStatusChange(table.id, 'AVAILABLE')}
+                        >
+                          Xong dọn dẹp
                         </Button>
                       )}
                       <Button
@@ -542,22 +567,37 @@ function StaffDashboardContent() {
                         <span>Tổng cộng:</span>
                         <span>{(order.totalAmount || 0).toLocaleString('vi-VN')}đ</span>
                       </div>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="flex-1"
-                          onClick={() => handleOrderStatusUpdate(order.id, 'COMPLETED')}
-                        >
-                          Hoàn thành
-                        </Button>
-                        <Button
-                          size="sm"
-                          className="flex-1"
-                          onClick={() => handleProcessPayment(order)}
-                        >
-                          Thanh toán
-                        </Button>
+                       <div className="flex gap-2 w-full">
+                        {order.status === 'PENDING_PAYMENT' ? (
+                          <Button
+                            size="sm"
+                            className="w-full bg-primary"
+                            onClick={() => handleProcessPayment(order)}
+                          >
+                            <CreditCard className="w-4 h-4 mr-2" />
+                            Thanh toán
+                          </Button>
+                        ) : (
+                          <>
+                            {order.status !== 'SERVED' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="flex-1"
+                                onClick={() => handleOrderStatusUpdate(order.id, 'SERVED')}
+                              >
+                                Phục vụ xong
+                              </Button>
+                            )}
+                            <Button
+                              size="sm"
+                              className="flex-1 bg-amber-600 hover:bg-amber-700 text-white"
+                              onClick={() => handleCloseAndPayOrder(order)}
+                            >
+                              Chốt & Thanh toán
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </div>
                   </CardContent>

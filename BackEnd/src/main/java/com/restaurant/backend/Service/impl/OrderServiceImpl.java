@@ -380,7 +380,7 @@ public class OrderServiceImpl implements OrderService {
         Order newOrder = new Order();
         newOrder.setTable(table);
         newOrder.setCustomer(customer); // Có thể null nếu walk-in
-        newOrder.setStatus("ACTIVE"); // Trạng thái đang hoạt động
+        newOrder.setStatus("PLACED"); // Trạng thái đang hoạt động
         newOrder.setOrderTime(LocalDateTime.now());
         newOrder.setCreatedAt(LocalDateTime.now());
         newOrder.setUpdatedAt(LocalDateTime.now());

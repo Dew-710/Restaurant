@@ -141,7 +141,7 @@ public class EmailServiceImpl implements EmailService {
             
             javaMailSender.send(message);
             log.info("Email sent successfully via SMTP to: {}", toEmail);
-        } catch (MessagingException e) {
+        } catch (Exception e) {
             log.error("Error sending email via SMTP to {}: {}", toEmail, e.getMessage(), e);
         }
     }

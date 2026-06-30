@@ -101,7 +101,7 @@ public class SepayServiceImpl implements SepayService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public SepayPaymentStatusResponse getPaymentStatus(String transactionId) {
         if (transactionId == null || transactionId.trim().isEmpty()) {
             throw new RuntimeException("Transaction ID is required");
@@ -113,6 +113,23 @@ public class SepayServiceImpl implements SepayService {
         }
 
         Payment payment = payments.get(0); // Lấy payment đầu tiên
+
+        // Mock auto-complete after 5 seconds from creation for testing
+        if ("PENDING".equalsIgnoreCase(payment.getStatus()) && payment.getCreatedAt() != null) {
+            if (payment.getCreatedAt().plusSeconds(5).isBefore(LocalDateTime.now())) {
+                payment.setStatus("COMPLETED");
+                payment.setPaidAt(LocalDateTime.now());
+                payment.setUpdatedAt(LocalDateTime.now());
+                paymentRepository.save(payment);
+
+                Order order = payment.getOrder();
+                if (order != null) {
+                    order.setPaymentStatus("PAID");
+                    order.setUpdatedAt(LocalDateTime.now());
+                    orderRepository.save(order);
+                }
+            }
+        }
 
         // Extract bank transaction ID from notes if available
         String bankTransactionId = null;

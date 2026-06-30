@@ -32,6 +32,7 @@ public class SecurityConfig {
             "http://localhost:3000",
             "http://localhost:*",
             "https://app.dewjunior.id.vn"
+
     ));
 
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"));

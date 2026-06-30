@@ -74,6 +74,10 @@ public class PaymentServiceImpl implements PaymentService {
         payment.setPaidAt(LocalDateTime.now());
         payment.setStatus("COMPLETED");
 
+        order.setPaymentStatus("PAID");
+        order.setUpdatedAt(LocalDateTime.now());
+        orderRepository.save(order);
+
         return paymentRepository.save(payment);
     }
 
@@ -202,8 +206,9 @@ public class PaymentServiceImpl implements PaymentService {
 
                 // update order status
                 Order order = p.getOrder();
-                if (order != null && (order.getStatus() == null || !"PAID".equalsIgnoreCase(order.getStatus()))) {
-                    order.setStatus("PAID");
+                if (order != null && (order.getPaymentStatus() == null || !"PAID".equalsIgnoreCase(order.getPaymentStatus()))) {
+                    order.setPaymentStatus("PAID");
+                    order.setUpdatedAt(LocalDateTime.now());
                     orderRepository.save(order);
                 }
             } else {

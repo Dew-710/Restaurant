@@ -2,13 +2,6 @@ import type {
   User,
   LoginRequest,
   RegisterRequest,
-  MenuItem,
-  Category,
-  RestaurantTable,
-  Order,
-  OrderItem,
-  Booking,
-  Payment,
   CreateOrderRequest,
   CreateOrderItemRequest,
   CreateBookingRequest,
@@ -20,7 +13,20 @@ import type {
   PaymentStatusResponse,
   AdminDashboardSummary,
   RecentOrder,
+  MenuItem,
+  Category,
+  RestaurantTable,
+  OrderItem,
+  Order,
 } from './types';
+
+export type {
+  MenuItem,
+  Category,
+  RestaurantTable,
+  OrderItem,
+  Order,
+};
 import { getApiBaseUrl } from './env';
 
 async function fetchData<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -72,7 +78,8 @@ export async function register(registerRequest: RegisterRequest) {
 }
 
 export async function getUsersList() {
-  return fetchData<{ message: string; users: User[] }>("/api/users/list");
+  const users = await fetchData<User[]>("/api/users/list");
+  return { message: "Users retrieved successfully", users };
 }
 
 export async function getUserById(id: number) {
@@ -125,15 +132,6 @@ export async function validateResetToken(token: string) {
 }
 
 // ===== MENU ITEMS API =====
-export interface MenuItem {
-  id: number;
-  name: string;
-  description: string;
-  price: number;
-  categoryId: number;
-  imageUrl?: string;
-  available: boolean;
-}
 
 export async function getMenuItems() {
   return fetchData<{ message: string; menuItems: MenuItem[] }>("/api/menu-items/list");
@@ -168,11 +166,6 @@ export async function deleteMenuItem(id: number) {
 }
 
 // ===== CATEGORIES API =====
-export interface Category {
-  id: number;
-  name: string;
-  description?: string;
-}
 
 export async function getCategories() {
   return fetchData<{ message: string; categories: Category[] }>("/api/categories/list");
@@ -199,13 +192,6 @@ export async function deleteCategory(id: number) {
 }
 
 // ===== TABLES API =====
-export interface RestaurantTable {
-  id: number;
-  tableNumber: string;
-  capacity: number;
-  status: string;
-  qrCode?: string;
-}
 
 export async function getTablesList() {
   return fetchData<{ message: string; tables: RestaurantTable[] }>("/api/tables/list");
@@ -255,26 +241,28 @@ export async function getTableByQr(qrCode: string) {
   return fetchData<{ message: string; table: RestaurantTable }>(`/api/tables/qr/${qrCode}`);
 }
 
+export async function createTable(table: { tableName: string; capacity: number; status: string; tableType?: string; location?: string }) {
+  return fetchData<{ message: string; table: RestaurantTable }>("/api/tables/create", {
+    method: 'POST',
+    body: JSON.stringify(table),
+  });
+}
+
+export async function updateTable(id: number, table: Partial<RestaurantTable>) {
+  return fetchData<{ message: string; table: RestaurantTable }>(`/api/tables/update/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(table),
+  });
+}
+
+export async function deleteTable(id: number) {
+  return fetchData<{ message: string }>(`/api/tables/delete/${id}`, {
+    method: 'DELETE',
+  });
+}
+
 
 // ===== ORDERS API =====
-export interface OrderItem {
-  id: number;
-  menuItem: MenuItem;
-  quantity: number;
-  status: string;
-  notes?: string;
-}
-
-export interface Order {
-  id: number;
-  tableId: number;
-  customerId?: number;
-  items: OrderItem[];
-  status: string;
-  totalAmount: number;
-  createdAt: string;
-  updatedAt: string;
-}
 
 export async function getOrders() {
   return fetchData<{ message: string; orders: Order[] }>("/api/orders/list");
@@ -461,7 +449,7 @@ export interface Payment {
 }
 
 export async function processPayment(payment: Omit<Payment, 'id'>) {
-  return fetchData<{ message: string; payment: Payment }>("/api/payments/process", {
+  return fetchData<{ message: string; payment: Payment }>(`/api/payments/process/${payment.orderId}`, {
     method: 'POST',
     body: JSON.stringify(payment),
   });

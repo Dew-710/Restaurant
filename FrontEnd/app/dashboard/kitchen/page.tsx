@@ -45,7 +45,7 @@ function KitchenDashboardContent() {
       const response = await getOrders();
       // Filter orders that have items in preparation
       const kitchenOrders = response.orders.filter(order =>
-        order.items.some(item =>
+        (order.orderItems || []).some((item: any) =>
           ['PENDING', 'PREPARING', 'READY'].includes(item.status)
         )
       );
@@ -112,19 +112,19 @@ function KitchenDashboardContent() {
   // Categorize orders by status và sắp xếp mới nhất lên trên
   const pendingOrders = sortOrdersByDate(
     orders.filter(order =>
-      order.items.some(item => item.status === 'PENDING')
+      (order.orderItems || []).some((item: any) => item.status === 'PENDING')
     )
   );
 
   const preparingOrders = sortOrdersByDate(
     orders.filter(order =>
-      order.items.some(item => item.status === 'PREPARING')
+      (order.orderItems || []).some((item: any) => item.status === 'PREPARING')
     )
   );
 
   const readyOrders = sortOrdersByDate(
     orders.filter(order =>
-      order.items.every(item => item.status === 'READY')
+      (order.orderItems || []).every((item: any) => item.status === 'READY')
     )
   );
 
@@ -231,7 +231,7 @@ function KitchenDashboardContent() {
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-lg">Đơn #{order.id}</CardTitle>
                       <Badge variant="outline" className="bg-yellow-50 text-yellow-700">
-                        Bàn {order.table?.tableNumber || order.tableId}
+                        Bàn {order.table?.tableName || order.tableId}
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">
@@ -240,9 +240,9 @@ function KitchenDashboardContent() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {order.items
-                        .filter(item => item.status === 'PENDING')
-                        .map((item) => (
+                      {(order.orderItems || [])
+                        .filter((item: any) => item.status === 'PENDING')
+                        .map((item: any) => (
                         <div key={item.id} className={`p-3 rounded-lg border ${getItemStatusColor(item.status)}`}>
                           <div className="flex items-center justify-between mb-2">
                             <span className="font-medium">{item.menuItem.name}</span>
@@ -283,15 +283,15 @@ function KitchenDashboardContent() {
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-lg">Đơn #{order.id}</CardTitle>
                       <Badge variant="outline" className="bg-orange-50 text-orange-700">
-                        Bàn {order.table?.tableNumber || order.tableId}
+                        Bàn {order.table?.tableName || order.tableId}
                       </Badge>
                     </div>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {order.items
-                        .filter(item => item.status === 'PREPARING')
-                        .map((item) => (
+                      {(order.orderItems || [])
+                        .filter((item: any) => item.status === 'PREPARING')
+                        .map((item: any) => (
                         <div key={item.id} className={`p-3 rounded-lg border ${getItemStatusColor(item.status)}`}>
                           <div className="flex items-center justify-between mb-2">
                             <span className="font-medium">{item.menuItem.name}</span>
@@ -333,13 +333,13 @@ function KitchenDashboardContent() {
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-lg">Đơn #{order.id}</CardTitle>
                       <Badge variant="outline" className="bg-green-50 text-green-700">
-                        Bàn {order.table?.tableNumber || order.tableId}
+                        Bàn {order.table?.tableName || order.tableId}
                       </Badge>
                     </div>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {order.items.map((item) => (
+                      {(order.orderItems || []).map((item: any) => (
                         <div key={item.id} className={`p-3 rounded-lg border ${getItemStatusColor(item.status)}`}>
                           <div className="flex items-center justify-between mb-2">
                             <span className="font-medium">{item.menuItem.name}</span>

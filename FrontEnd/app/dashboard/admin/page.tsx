@@ -32,7 +32,13 @@ import {
   updateMenuItem,
   deleteMenuItem,
   updateTableStatus,
-  sendQRCodeToESP32
+  sendQRCodeToESP32,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+  createTable,
+  updateTable,
+  deleteTable
 } from '@/lib/api';
 import type {
   RestaurantTable,
@@ -96,8 +102,18 @@ function AdminDashboardContent() {
   const [selectedMenuItem, setSelectedMenuItem] = useState<MenuItem | null>(null);
   
   // Form states
-  const [userForm, setUserForm] = useState({ fullName: '', email: '', phone: '', role: 'CUSTOMER', status: 'ACTIVE' });
+  const [userForm, setUserForm] = useState({ username: '', password: '', fullName: '', email: '', phone: '', role: 'CUSTOMER', status: 'ACTIVE' });
   const [menuForm, setMenuForm] = useState({ name: '', description: '', price: '', categoryId: '', imageUrl: '', isAvailable: true });
+
+  // Category state
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [categoryForm, setCategoryForm] = useState({ name: '', description: '' });
+
+  // Table state
+  const [tableDialogOpen, setTableDialogOpen] = useState(false);
+  const [selectedTableForEdit, setSelectedTableForEdit] = useState<RestaurantTable | null>(null);
+  const [tableForm, setTableForm] = useState({ tableName: '', capacity: '', status: 'AVAILABLE', tableType: 'INDOOR', location: '' });
 
   useEffect(() => {
     loadDashboardData();
@@ -234,13 +250,15 @@ function AdminDashboardContent() {
   // User management handlers
   const handleAddUser = () => {
     setSelectedUser(null);
-    setUserForm({ fullName: '', email: '', phone: '', role: 'CUSTOMER', status: 'ACTIVE' });
+    setUserForm({ username: '', password: '', fullName: '', email: '', phone: '', role: 'CUSTOMER', status: 'ACTIVE' });
     setUserDialogOpen(true);
   };
 
   const handleEditUser = (user: User) => {
     setSelectedUser(user);
     setUserForm({
+      username: user.username || '',
+      password: '',
       fullName: user.fullName || '',
       email: user.email || '',
       phone: user.phone || '',
@@ -258,21 +276,18 @@ function AdminDashboardContent() {
         toast.success('Cập nhật người dùng thành công');
       } else {
         // Tạo người dùng mới
-        // Tạo username từ email (lấy phần trước @)
-        const username = userForm.email.split('@')[0] || `user_${Date.now()}`;
-        // Tạo password mặc định (có thể yêu cầu admin đổi sau)
-        const defaultPassword = '123456';
+        const username = userForm.username.trim() || userForm.email.split('@')[0] || `user_${Date.now()}`;
+        const password = userForm.password.trim() || '123456';
         
         await register({
           username,
-          password: defaultPassword,
-          confirmPassword: defaultPassword,
+          password,
           fullName: userForm.fullName,
           email: userForm.email,
           phone: userForm.phone,
           role: userForm.role as any
         });
-        toast.success('Thêm người dùng thành công. Mật khẩu mặc định: 123456');
+        toast.success(`Thêm người dùng thành công. Mật khẩu: ${password}`);
       }
       setUserDialogOpen(false);
       await loadDashboardData();
@@ -382,12 +397,110 @@ function AdminDashboardContent() {
     }
   };
 
+  // Category handlers
+  const handleAddCategory = () => {
+    setSelectedCategory(null);
+    setCategoryForm({ name: '', description: '' });
+    setCategoryDialogOpen(true);
+  };
+
+  const handleEditCategory = (cat: Category) => {
+    setSelectedCategory(cat);
+    setCategoryForm({ name: cat.name || '', description: cat.description || '' });
+    setCategoryDialogOpen(true);
+  };
+
+  const handleSaveCategory = async () => {
+    try {
+      if (selectedCategory) {
+        await updateCategory(selectedCategory.id, categoryForm);
+        toast.success('Cập nhật danh mục thành công');
+      } else {
+        await createCategory(categoryForm);
+        toast.success('Thêm danh mục thành công');
+      }
+      setCategoryDialogOpen(false);
+      await loadDashboardData();
+    } catch (error: any) {
+      toast.error('Không thể lưu danh mục: ' + (error.message || 'Lỗi không xác định'));
+    }
+  };
+
+  const handleDeleteCategory = async (catId: number, name: string) => {
+    if (!confirm(`Bạn có chắc muốn xóa danh mục "${name}"? Các món ăn trong danh mục này có thể bị ảnh hưởng.`)) {
+      return;
+    }
+    try {
+      await deleteCategory(catId);
+      toast.success('Xóa danh mục thành công');
+      await loadDashboardData();
+    } catch (error: any) {
+      toast.error('Không thể xóa danh mục: ' + (error.message || 'Lỗi không xác định'));
+    }
+  };
+
+  // Table CRUD handlers
+  const handleAddTable = () => {
+    setSelectedTableForEdit(null);
+    setTableForm({ tableName: '', capacity: '', status: 'AVAILABLE', tableType: 'INDOOR', location: '' });
+    setTableDialogOpen(true);
+  };
+
+  const handleEditTable = (table: RestaurantTable) => {
+    setSelectedTableForEdit(table);
+    setTableForm({
+      tableName: table.tableName || '',
+      capacity: table.capacity?.toString() || '0',
+      status: table.status || 'AVAILABLE',
+      tableType: table.tableType || 'INDOOR',
+      location: table.location || ''
+    });
+    setTableDialogOpen(true);
+  };
+
+  const handleSaveTable = async () => {
+    try {
+      const payload = {
+        tableName: tableForm.tableName,
+        capacity: parseInt(tableForm.capacity) || 0,
+        status: tableForm.status,
+        tableType: tableForm.tableType,
+        location: tableForm.location
+      };
+
+      if (selectedTableForEdit) {
+        await updateTable(selectedTableForEdit.id, payload);
+        toast.success('Cập nhật bàn thành công');
+      } else {
+        await createTable(payload);
+        toast.success('Thêm bàn thành công');
+      }
+      setTableDialogOpen(false);
+      await loadDashboardData();
+    } catch (error: any) {
+      toast.error('Không thể lưu bàn ăn: ' + (error.message || 'Lỗi không xác định'));
+    }
+  };
+
+  const handleDeleteTable = async (tableId: number, tableName: string) => {
+    if (!confirm(`Bạn có chắc muốn xóa bàn "${tableName}"?`)) {
+      return;
+    }
+    try {
+      await deleteTable(tableId);
+      toast.success('Xóa bàn thành công');
+      await loadDashboardData();
+    } catch (error: any) {
+      toast.error('Không thể xóa bàn: ' + (error.message || 'Lỗi không xác định'));
+    }
+  };
+
   // Calculate statistics from dashboard summary
   const stats = [
     {
       title: "Tổng doanh thu",
       value: dashboardSummary 
-        ? `${dashboardSummary.totalRevenue.toLocaleString('vi-VN')}đ`
+        ? `${(dashboardSummary.totalRevenue ?? 0).toLocaleString('vi-VN')}đ`
         : '0đ',
       icon: DollarSign,
       color: "text-green-600",
@@ -515,7 +628,7 @@ function AdminDashboardContent() {
                               </p>
                             </div>
                             <div className="text-right">
-                              <p className="font-medium">{order.totalAmount.toLocaleString('vi-VN')}đ</p>
+                              <p className="font-medium">{(order.totalAmount ?? 0).toLocaleString('vi-VN')}đ</p>
                               <Badge variant={
                                 order.paymentStatus === 'PAID' ? 'default' :
                                 order.paymentStatus === 'CANCELLED' ? 'destructive' : 'secondary'
@@ -697,8 +810,8 @@ function AdminDashboardContent() {
                               {order.customer && (
                                 <p>Khách: {order.customer.fullName || order.customer.username}</p>
                               )}
-                              <p>Tổng: {order.totalAmount.toLocaleString('vi-VN')}đ</p>
-                              <p>Ngày: {new Date(order.createdAt).toLocaleString('vi-VN')}</p>
+                              <p>Tổng: {(order.totalAmount ?? 0).toLocaleString('vi-VN')}đ</p>
+                              <p>Ngày: {order.createdAt ? new Date(order.createdAt).toLocaleString('vi-VN') : 'Chưa rõ'}</p>
                             </div>
                           </div>
                           <Select
@@ -746,6 +859,10 @@ function AdminDashboardContent() {
                 >
                   Cleanup Categories
                 </Button>
+                <Button onClick={handleAddCategory} className="bg-green-600 hover:bg-green-700 text-white">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Thêm danh mục
+                </Button>
                 <Button onClick={handleAddMenuItem}>
                   <Plus className="w-4 h-4 mr-2" />
                   Thêm món ăn
@@ -759,12 +876,28 @@ function AdminDashboardContent() {
                   <CardTitle>Danh mục ({categories.length})</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {categories.map((category) => (
-                    <div key={category.id} className="flex items-center justify-between py-2">
-                      <span>{category.name}</span>
-                      <Button variant="outline" size="sm">Sửa</Button>
-                    </div>
-                  ))}
+                  <div className="space-y-2 max-h-[600px] overflow-y-auto pr-2">
+                    {categories.map((category) => (
+                      <div key={category.id} className="flex items-center justify-between py-2 border-b last:border-b-0">
+                        <div>
+                          <p className="font-semibold">{category.name}</p>
+                          {category.description && (
+                            <p className="text-xs text-muted-foreground line-clamp-1">{category.description}</p>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm" onClick={() => handleEditCategory(category)}>
+                            <Edit className="w-4 h-4 mr-1" />
+                            Sửa
+                          </Button>
+                          <Button variant="destructive" size="sm" onClick={() => handleDeleteCategory(category.id, category.name)}>
+                            <Trash2 className="w-4 h-4 mr-1" />
+                            Xóa
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
 
@@ -822,7 +955,10 @@ function AdminDashboardContent() {
           <TabsContent value="tables" className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold">Quản lý bàn ăn</h2>
-              <Button>Thêm bàn</Button>
+              <Button onClick={handleAddTable}>
+                <Plus className="w-4 h-4 mr-2" />
+                Thêm bàn
+              </Button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -837,7 +973,7 @@ function AdminDashboardContent() {
                       <Table className="w-6 h-6" />
                     </div>
                     <p className="font-semibold">{table.tableName}</p>
-                    <p className="text-sm text-muted-foreground">{table.capacity} người</p>
+                    <p className="text-sm text-muted-foreground">{table.capacity} người • {table.tableType || 'INDOOR'}</p>
                     <div className="mt-3 space-y-2">
                       <Select
                         value={table.status || 'AVAILABLE'}
@@ -854,6 +990,26 @@ function AdminDashboardContent() {
                           <SelectItem value="MAINTENANCE">Bảo trì</SelectItem>
                         </SelectContent>
                       </Select>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => handleEditTable(table)}
+                        >
+                          <Edit className="w-4 h-4 mr-1" />
+                          Sửa
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="flex-1"
+                          onClick={() => handleDeleteTable(table.id, table.tableName)}
+                        >
+                          <Trash2 className="w-4 h-4 mr-1" />
+                          Xóa
+                        </Button>
+                      </div>
                       <Button
                         size="sm"
                         variant="outline"
@@ -879,6 +1035,30 @@ function AdminDashboardContent() {
             <DialogTitle>{selectedUser ? 'Cập nhật người dùng' : 'Thêm người dùng mới'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            {!selectedUser && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="username">Tên đăng nhập (Username) *</Label>
+                  <Input
+                    id="username"
+                    value={userForm.username}
+                    onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
+                    placeholder="Nhập tên đăng nhập"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Mật khẩu *</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={userForm.password}
+                    onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
+                    placeholder="Nhập mật khẩu (Mặc định: 123456 nếu bỏ trống)"
+                  />
+                </div>
+              </>
+            )}
             <div className="space-y-2">
               <Label htmlFor="fullName">Họ tên</Label>
               <Input
@@ -1021,6 +1201,120 @@ function AdminDashboardContent() {
             <Button variant="outline" onClick={() => setMenuDialogOpen(false)}>Hủy</Button>
             <Button onClick={handleSaveMenuItem}>
               {selectedMenuItem ? 'Cập nhật' : 'Thêm mới'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Category CRUD Dialog */}
+      <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{selectedCategory ? 'Cập nhật danh mục' : 'Thêm danh mục mới'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="categoryName">Tên danh mục</Label>
+              <Input
+                id="categoryName"
+                value={categoryForm.name}
+                onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
+                placeholder="Nhập tên danh mục"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="categoryDescription">Mô tả</Label>
+              <Textarea
+                id="categoryDescription"
+                value={categoryForm.description}
+                onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })}
+                placeholder="Nhập mô tả cho danh mục"
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCategoryDialogOpen(false)}>Hủy</Button>
+            <Button onClick={handleSaveCategory}>
+              {selectedCategory ? 'Cập nhật' : 'Thêm mới'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Table CRUD Dialog */}
+      <Dialog open={tableDialogOpen} onOpenChange={setTableDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{selectedTableForEdit ? 'Cập nhật bàn ăn' : 'Thêm bàn ăn mới'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="tableName">Tên bàn</Label>
+              <Input
+                id="tableName"
+                value={tableForm.tableName}
+                onChange={(e) => setTableForm({ ...tableForm, tableName: e.target.value })}
+                placeholder="Ví dụ: Bàn 15"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="tableCapacity">Sức chứa (người)</Label>
+                <Input
+                  id="tableCapacity"
+                  type="number"
+                  value={tableForm.capacity}
+                  onChange={(e) => setTableForm({ ...tableForm, capacity: e.target.value })}
+                  placeholder="4"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tableType">Loại bàn</Label>
+                <Select value={tableForm.tableType} onValueChange={(value) => setTableForm({ ...tableForm, tableType: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="INDOOR">Trong nhà (INDOOR)</SelectItem>
+                    <SelectItem value="OUTDOOR">Sân vườn (OUTDOOR)</SelectItem>
+                    <SelectItem value="WINDOW">Cạnh cửa sổ (WINDOW)</SelectItem>
+                    <SelectItem value="VIP">Phòng VIP (VIP)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="tableStatus">Trạng thái</Label>
+                <Select value={tableForm.status} onValueChange={(value) => setTableForm({ ...tableForm, status: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="AVAILABLE">Trống (AVAILABLE)</SelectItem>
+                    <SelectItem value="OCCUPIED">Đang dùng (OCCUPIED)</SelectItem>
+                    <SelectItem value="RESERVED">Đã đặt (RESERVED)</SelectItem>
+                    <SelectItem value="CLEANING">Đang dọn (CLEANING)</SelectItem>
+                    <SelectItem value="MAINTENANCE">Bảo trì (MAINTENANCE)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tableLocation">Khu vực / Vị trí</Label>
+                <Input
+                  id="tableLocation"
+                  value={tableForm.location}
+                  onChange={(e) => setTableForm({ ...tableForm, location: e.target.value })}
+                  placeholder="Ví dụ: Khu A"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTableDialogOpen(false)}>Hủy</Button>
+            <Button onClick={handleSaveTable}>
+              {selectedTableForEdit ? 'Cập nhật' : 'Thêm mới'}
             </Button>
           </DialogFooter>
         </DialogContent>

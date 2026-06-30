@@ -88,8 +88,18 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public void delete(Long id) {
         User user = findById(id);
+        
+        // Clean up referencing tables before deleting
+        userRepository.nullifyCustomerOrders(id);
+        userRepository.nullifyStaffOrders(id);
+        userRepository.nullifyOrderBookings(id);
+        userRepository.nullifyPaymentTransactions(id);
+        userRepository.deleteCustomerBookings(id);
+        userRepository.deleteUserWallet(id);
+        
         userRepository.delete(user);
     }
 

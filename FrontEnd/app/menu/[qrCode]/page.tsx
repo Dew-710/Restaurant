@@ -167,7 +167,7 @@ export default function CustomerMenuPage() {
       }));
 
       console.log('Adding items to order:', orderId, orderItems);
-      await addItemsToOrder(orderId, orderItems);
+      await addItemsToOrder(orderId, orderItems as any);
       
       toast.success('Đặt món thành công! Nhân viên sẽ phục vụ bạn sớm nhất có thể.');
       setCart([]);

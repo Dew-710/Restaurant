@@ -37,8 +37,8 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.orderItems oi LEFT JOIN FETCH oi.menuItem WHERE o.table.id = :tableId AND (o.paymentStatus IS NULL OR o.paymentStatus != 'PAID') AND o.status NOT IN ('CANCELLED', 'PENDING_PAYMENT') ORDER BY o.createdAt DESC")
     List<Order> findActiveOrdersByTableId(@Param("tableId") Long tableId);
 
-    // Get orders for staff dashboard - show only PENDING_PAYMENT orders (ready for payment)
+    // Get orders for staff dashboard - show all active orders (not paid and not cancelled)
     // JOIN FETCH để load orderItems và menuItem cùng lúc (tránh N+1 query)
-    @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.orderItems oi LEFT JOIN FETCH oi.menuItem WHERE o.status = 'PENDING_PAYMENT' AND (o.paymentStatus IS NULL OR o.paymentStatus != 'PAID') ORDER BY o.updatedAt DESC")
+    @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.orderItems oi LEFT JOIN FETCH oi.menuItem WHERE o.status != 'CANCELLED' AND (o.paymentStatus IS NULL OR o.paymentStatus != 'PAID') ORDER BY o.updatedAt DESC")
     List<Order> findOrdersForStaffDashboard();
 }

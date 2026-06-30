@@ -15,9 +15,16 @@ export const getApiBaseUrl = (): string => {
   
   // If running in browser and on same origin, use relative URL
   if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    
+    // Auto-detect the custom tunnel domains
+    if (hostname === 'app.dewjunior.id.vn') {
+      return 'https://api.dewjunior.id.vn';
+    }
+    
     // Check if we're on a Cloudflare tunnel - if so, try to use backend tunnel
     // For now, fallback to localhost for local development
-    if (window.location.hostname.includes('trycloudflare.com')) {
+    if (hostname.includes('trycloudflare.com')) {
       // If frontend is on Cloudflare, backend should also be on Cloudflare
       // User needs to set NEXT_PUBLIC_API_BASE_URL environment variable
       console.warn('⚠️ Frontend is on Cloudflare but NEXT_PUBLIC_API_BASE_URL is not set. Using localhost fallback.');
